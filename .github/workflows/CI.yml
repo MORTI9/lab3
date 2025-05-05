@@ -11,15 +11,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        build_type: [Release, Debug]
-        exclude:
-          - os: windows-latest
-            build_type: Debug  
+        build_type: [Release]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4  
 
     - name: Install dependencies (Linux)
       if: matrix.os == 'ubuntu-latest'
@@ -29,14 +26,13 @@ jobs:
           cmake \
           g++ \
           make \
-          libfmt-dev  
+          libfmt-dev
 
     - name: Install dependencies (Windows)
       if: matrix.os == 'windows-latest'
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2  
       with:
         vs-version: '17.0'
-        components: 'Microsoft.VisualStudio.Component.VC.CMake.Project'
 
     - name: Configure Project
       shell: bash
@@ -52,20 +48,21 @@ jobs:
       shell: bash
       run: |
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          cmake --build build --config ${{ matrix.build_type }} --parallel
+          cmake --build build --config ${{ matrix.build_type }} --parallel 4
         else
           cmake --build build -- -j$(nproc)
         fi
 
     - name: Run tests
-      if: matrix.os == 'ubuntu-latest'  
+      if: matrix.os == 'ubuntu-latest'
       run: |
         cd build
         ctest --output-on-failure
 
-    - name: Upload artifacts (Debug)
-      if: matrix.build_type == 'Debug' && github.event_name == 'push'
-      uses: actions/upload-artifact@v3
+    - name: Upload artifacts
+      if: github.event_name == 'push'
+      uses: actions/upload-artifact@v4  # Обновлено до v4
       with:
         name: build-${{ matrix.os }}-${{ matrix.build_type }}
         path: build/
+        retention-days: 3
